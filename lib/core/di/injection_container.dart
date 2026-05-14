@@ -27,6 +27,12 @@ final getIt = GetIt.instance;
 Future<void> configureDependencies({required bool firebaseReady}) async {
   final prefsService = await SharedPrefsService.create();
   final hiveService = await HiveService.create();
+  GoogleSignIn? googleSignIn;
+
+  if (firebaseReady) {
+    googleSignIn = GoogleSignIn.instance;
+    await googleSignIn.initialize();
+  }
 
   getIt
     ..registerSingleton<bool>(firebaseReady, instanceName: 'firebaseReady')
@@ -38,7 +44,7 @@ Future<void> configureDependencies({required bool firebaseReady}) async {
     ..registerLazySingleton<AuthRepository>(
       () => FirebaseAuthRepository(
         firebaseAuth: firebaseReady ? FirebaseAuth.instance : null,
-        googleSignIn: firebaseReady ? GoogleSignIn(scopes: ['email']) : null,
+        googleSignIn: googleSignIn,
         firebaseReady: getIt<bool>(instanceName: 'firebaseReady'),
       ),
     )

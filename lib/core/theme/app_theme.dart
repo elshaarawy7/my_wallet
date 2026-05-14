@@ -35,7 +35,7 @@ class AppTheme {
         elevation: 0,
         centerTitle: true,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: isDark ? const Color(0xFF18211F) : Colors.white,
         elevation: 0,
         shadowColor: Colors.black.withOpacity(0.06),

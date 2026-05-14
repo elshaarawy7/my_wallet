@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:my_wallet/features/settings/presentation/cubit/settings_cubit.dart';
 
 import '../../../../../core/widgets/primary_button.dart';
-import '../../../../settings/presentation/cubit/settings_cubit.dart';
 
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key});

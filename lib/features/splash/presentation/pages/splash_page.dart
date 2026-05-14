@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:my_wallet/features/auth/presentation/cubit/auth_cubit.dart';
+import 'package:my_wallet/features/settings/presentation/cubit/settings_cubit.dart';
 
-import '../../../../auth/presentation/cubit/auth_cubit.dart';
-import '../../../../settings/presentation/cubit/settings_cubit.dart';
+
 import '../../../../../core/constants/app_constants.dart';
 
 class SplashPage extends StatefulWidget {

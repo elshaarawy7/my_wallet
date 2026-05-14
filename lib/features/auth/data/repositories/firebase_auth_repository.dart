@@ -73,14 +73,9 @@ class FirebaseAuthRepository implements AuthRepository {
   Future<AppUser> signInWithGoogle() async {
     _ensureFirebase();
 
-    final googleUser = await _googleSignIn!.signIn();
-    if (googleUser == null) {
-      throw const AuthException('تم إلغاء تسجيل الدخول عبر Google.');
-    }
-
-    final googleAuth = await googleUser.authentication;
+    final googleUser = await _googleSignIn!.authenticate();
+    final googleAuth = googleUser.authentication;
     final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
       idToken: googleAuth.idToken,
     );
 
