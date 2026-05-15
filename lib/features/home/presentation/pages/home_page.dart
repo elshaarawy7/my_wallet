@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/utils/formatters.dart';
@@ -401,13 +402,16 @@ class _CategoriesPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final mutedText = isDark ? const Color(0xFFB5C3BE) : Colors.grey[600]!;
+
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withOpacity(isDark ? 0.12 : 0.04),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -423,7 +427,7 @@ class _CategoriesPanel extends StatelessWidget {
                   child: Text(
                     'التصنيف',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
+                          color: mutedText,
                           fontWeight: FontWeight.w700,
                         ),
                   ),
@@ -431,7 +435,7 @@ class _CategoriesPanel extends StatelessWidget {
                 Text(
                   'المبلغ',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
+                        color: mutedText,
                         fontWeight: FontWeight.w700,
                       ),
                 ),
@@ -457,7 +461,7 @@ class _CategoriesPanel extends StatelessWidget {
                     height: 1,
                     indent: 16,
                     endIndent: 16,
-                    color: Colors.grey.withOpacity(0.15),
+                    color: Theme.of(context).dividerColor,
                   ),
               ],
             );
@@ -482,10 +486,7 @@ class _CategoryRow extends StatelessWidget {
     final color = Color(category.colorValue);
 
     return InkWell(
-      onTap: () => context.push(
-        '/expense',
-        extra: <String, dynamic>{'categoryId': category.id},
-      ),
+      onTap: () => _showQuickAmountSheet(context),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         child: Row(
@@ -514,42 +515,135 @@ class _CategoryRow extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
             ),
-            PopupMenuButton<_CategoryAction>(
-              icon: const Icon(Icons.more_horiz_rounded, size: 18),
-              onSelected: (action) {
-                switch (action) {
-                  case _CategoryAction.addExpense:
-                    context.push(
-                      '/expense',
-                      extra: <String, dynamic>{'categoryId': category.id},
-                    );
-                    break;
-                  case _CategoryAction.edit:
-                    _showCategoryDialog(context, category: category);
-                    break;
-                  case _CategoryAction.delete:
-                    context.read<CategoriesCubit>().deleteCategory(category.id);
-                    break;
-                }
-              },
-              itemBuilder: (context) => const [
-                PopupMenuItem(
-                  value: _CategoryAction.addExpense,
-                  child: Text('إضافة مصروف'),
-                ),
-                PopupMenuItem(
-                  value: _CategoryAction.edit,
-                  child: Text('تعديل التصنيف'),
-                ),
-                PopupMenuItem(
-                  value: _CategoryAction.delete,
-                  child: Text('حذف التصنيف'),
-                ),
-              ],
+            IconButton(
+              onPressed: () => _showCategoryActions(context),
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              visualDensity: const VisualDensity(horizontal: -3, vertical: -3),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _showQuickAmountSheet(BuildContext context) async {
+    final month = context.read<MonthsCubit>().state.selectedMonth;
+    if (month == null) {
+      return;
+    }
+
+    final controller = TextEditingController();
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            20,
+            20,
+            MediaQuery.of(sheetContext).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'إضافة مبلغ إلى ${category.name}',
+                style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                  labelText: 'المبلغ',
+                  prefixText: 'ج.م ',
+                ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: () async {
+                  final amount = double.tryParse(controller.text.trim());
+                  if (amount == null || amount <= 0) {
+                    return;
+                  }
+
+                  await context.read<ExpensesCubit>().saveExpense(
+                        Expense(
+                          id: const Uuid().v4(),
+                          monthId: month.id,
+                          categoryId: category.id,
+                          amount: amount,
+                          note: '',
+                          date: DateTime.now(),
+                          createdAt: DateTime.now(),
+                        ),
+                      );
+
+                  if (sheetContext.mounted) {
+                    Navigator.pop(sheetContext);
+                  }
+                },
+                child: const Text('حفظ'),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(sheetContext);
+                  context.push(
+                    '/expense',
+                    extra: <String, dynamic>{'categoryId': category.id},
+                  );
+                },
+                child: const Text('تفاصيل أكثر'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showCategoryActions(BuildContext context) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.add_rounded),
+                title: const Text('إضافة مصروف'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _showQuickAmountSheet(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('تعديل التصنيف'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _showCategoryDialog(context, category: category);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete_outline_rounded),
+                title: const Text('حذف التصنيف'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  context.read<CategoriesCubit>().deleteCategory(category.id);
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -644,8 +738,6 @@ class _CategoryRow extends StatelessWidget {
     );
   }
 }
-
-enum _CategoryAction { addExpense, edit, delete }
 
 class _ExpenseTile extends StatelessWidget {
   const _ExpenseTile({required this.expense, required this.category});
