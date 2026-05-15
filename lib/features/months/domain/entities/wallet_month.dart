@@ -6,7 +6,7 @@ class WalletMonth extends Equatable {
     required this.name,
     required this.year,
     required this.monthNumber,
-    required this.budget,
+    required this.monthlyIncome,
     required this.createdAt,
   });
 
@@ -14,9 +14,16 @@ class WalletMonth extends Equatable {
   final String name;
   final int year;
   final int monthNumber;
-  final double budget;
+  final double monthlyIncome;
   final DateTime createdAt;
 
   @override
-  List<Object?> get props => [id, name, year, monthNumber, budget, createdAt];
+  List<Object?> get props => [
+        id,
+        name,
+        year,
+        monthNumber,
+        monthlyIncome,
+        createdAt,
+      ];
 }

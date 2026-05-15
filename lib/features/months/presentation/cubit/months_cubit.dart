@@ -80,6 +80,17 @@ class MonthsCubit extends Cubit<MonthsState> {
     await loadMonths();
   }
 
+  Future<void> updateMonthlyIncome({
+    required String monthId,
+    required double monthlyIncome,
+  }) async {
+    await _repository.updateMonthlyIncome(
+      monthId: monthId,
+      monthlyIncome: monthlyIncome,
+    );
+    await loadMonths();
+  }
+
   Future<void> selectMonth(String monthId) async {
     await _repository.setSelectedMonthId(monthId);
     emit(state.copyWith(selectedMonthId: monthId));

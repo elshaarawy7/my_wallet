@@ -49,7 +49,10 @@ Future<void> configureDependencies({required bool firebaseReady}) async {
       ),
     )
     ..registerLazySingleton<CategoriesRepository>(
-      () => CategoriesLocalRepository(getIt<HiveService>()),
+      () => CategoriesLocalRepository(
+        getIt<HiveService>(),
+        getIt<SharedPrefsService>(),
+      ),
     )
     ..registerLazySingleton<MonthsRepository>(
       () => MonthsLocalRepository(

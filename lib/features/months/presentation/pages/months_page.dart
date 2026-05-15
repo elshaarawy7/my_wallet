@@ -26,7 +26,7 @@ class MonthsPage extends StatelessWidget {
           if (state.months.isEmpty) {
             return const EmptyStateView(
               title: 'لا توجد شهور',
-              message: 'ابدأ بإنشاء أول شهر لمتابعة مصروفاتك.',
+              message: 'أنشئ شهرًا جديدًا للبدء في تسجيل المصروفات.',
             );
           }
 
@@ -37,9 +37,10 @@ class MonthsPage extends StatelessWidget {
             itemCount: state.months.length,
             itemBuilder: (context, index) {
               final month = state.months[index];
-              final total = expenses
+              final totalSpent = expenses
                   .where((expense) => expense.monthId == month.id)
                   .fold<double>(0, (sum, expense) => sum + expense.amount);
+              final remaining = month.monthlyIncome - totalSpent;
 
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
@@ -54,8 +55,9 @@ class MonthsPage extends StatelessWidget {
                   ),
                   title: Text(month.name),
                   subtitle: Text(
-                    'المصروف: ${total.toStringAsFixed(0)} ج.م • الميزانية: ${month.budget.toStringAsFixed(0)} ج.م',
+                    'الدخل: ${month.monthlyIncome.toStringAsFixed(0)} ج.م • المتبقي: ${remaining.toStringAsFixed(0)} ج.م',
                   ),
+                  trailing: Text('${totalSpent.toStringAsFixed(0)} ج.م'),
                 ),
               );
             },
@@ -66,7 +68,7 @@ class MonthsPage extends StatelessWidget {
   }
 
   Future<void> _showAddMonthDialog(BuildContext context) async {
-    final budgetController = TextEditingController(
+    final incomeController = TextEditingController(
       text: AppConstants.defaultBudget.toStringAsFixed(0),
     );
     var selectedDate = DateTime.now();
@@ -98,9 +100,9 @@ class MonthsPage extends StatelessWidget {
                     },
                   ),
                   TextField(
-                    controller: budgetController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'الميزانية'),
+                    controller: incomeController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'الدخل الشهري'),
                   ),
                 ],
               ),
@@ -116,7 +118,7 @@ class MonthsPage extends StatelessWidget {
                       name: DateFormat('MMMM yyyy', 'ar').format(selectedDate),
                       year: selectedDate.year,
                       monthNumber: selectedDate.month,
-                      budget: double.tryParse(budgetController.text) ??
+                      monthlyIncome: double.tryParse(incomeController.text) ??
                           AppConstants.defaultBudget,
                       createdAt: DateTime(selectedDate.year, selectedDate.month, 1),
                     );

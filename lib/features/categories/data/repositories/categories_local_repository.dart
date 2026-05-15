@@ -1,14 +1,15 @@
-import 'package:flutter/material.dart';
-
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/services/hive_service.dart';
+import '../../../../core/services/shared_prefs_service.dart';
 import '../../domain/entities/expense_category.dart';
 import '../../domain/repositories/categories_repository.dart';
 import '../models/expense_category_model.dart';
 
 class CategoriesLocalRepository implements CategoriesRepository {
-  CategoriesLocalRepository(this._hiveService);
+  CategoriesLocalRepository(this._hiveService, this._prefsService);
 
   final HiveService _hiveService;
+  final SharedPrefsService _prefsService;
 
   @override
   Future<void> deleteCategory(String categoryId) async {
@@ -29,7 +30,9 @@ class CategoriesLocalRepository implements CategoriesRepository {
 
   @override
   Future<void> seedDefaultCategories() async {
-    if (_hiveService.categoriesBox.isNotEmpty) {
+    final seeded = _prefsService.getBool(AppConstants.categoriesSeedVersionKey);
+
+    if (seeded) {
       return;
     }
 
@@ -63,23 +66,32 @@ class CategoriesLocalRepository implements CategoriesRepository {
         isDefault: true,
       ),
       const ExpenseCategoryModel(
-        id: 'bills',
-        name: 'الالتزامات',
-        iconKey: 'payments',
+        id: 'internet',
+        name: 'الإنترنت',
+        iconKey: 'wifi',
         colorValue: 0xFF9575CD,
         isDefault: true,
       ),
       const ExpenseCategoryModel(
-        id: 'fun',
-        name: 'الرفاهيات',
-        iconKey: 'celebration',
+        id: 'other',
+        name: 'أخرى',
+        iconKey: 'more_horiz',
         colorValue: 0xFFF06292,
         isDefault: true,
       ),
     ];
 
-    for (final category in defaults) {
-      await _hiveService.categoriesBox.put(category.id, category);
+    if (_hiveService.categoriesBox.isNotEmpty) {
+      await _hiveService.categoriesBox.delete('bills');
+      await _hiveService.categoriesBox.delete('fun');
     }
+
+    for (final category in defaults) {
+      if (_hiveService.categoriesBox.get(category.id) == null) {
+        await _hiveService.categoriesBox.put(category.id, category);
+      }
+    }
+
+    await _prefsService.setBool(AppConstants.categoriesSeedVersionKey, true);
   }
 }

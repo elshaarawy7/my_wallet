@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/widgets/empty_state_view.dart';
+import '../../../categories/domain/entities/expense_category.dart';
 import '../../../categories/presentation/cubit/categories_cubit.dart';
 import '../../../expenses/presentation/cubit/expenses_cubit.dart';
 import '../../../months/presentation/cubit/months_cubit.dart';
@@ -23,73 +24,108 @@ class StatisticsPage extends StatelessWidget {
               if (month == null) {
                 return const EmptyStateView(
                   title: 'لا توجد بيانات',
-                  message: 'أنشئ شهرًا جديدًا وأضف مصروفات لعرض الإحصائيات.',
+                  message: 'أنشئ شهرًا جديدًا ثم أضف مصروفات لعرض الإحصائيات.',
                 );
               }
 
-              final expenses = expensesState.expenses
+              final monthExpenses = expensesState.expenses
                   .where((expense) => expense.monthId == month.id)
                   .toList();
-
-              if (expenses.isEmpty) {
+              if (monthExpenses.isEmpty) {
                 return const EmptyStateView(
-                  title: 'الإحصائيات ما زالت فارغة',
-                  message: 'بعد إضافة المصروفات ستظهر الرسوم هنا تلقائيًا.',
-                  icon: Icons.bar_chart_rounded,
+                  title: 'الإحصائيات فارغة',
+                  message: 'بعد تسجيل مصروفاتك ستظهر الرسوم والتحليلات هنا.',
+                  icon: Icons.pie_chart_rounded,
                 );
               }
 
               final categories = context.read<CategoriesCubit>().state.categories;
-              final totalsByCategory = <String, double>{};
+              final totalsByCategory = <ExpenseCategory, double>{};
 
-              for (final expense in expenses) {
-                totalsByCategory.update(
-                  expense.categoryId,
-                  (value) => value + expense.amount,
-                  ifAbsent: () => expense.amount,
-                );
+              for (final category in categories) {
+                final total = monthExpenses
+                    .where((expense) => expense.categoryId == category.id)
+                    .fold<double>(0, (sum, expense) => sum + expense.amount);
+                if (total > 0) {
+                  totalsByCategory[category] = total;
+                }
               }
+
+              final topCategoryEntry = totalsByCategory.entries.isEmpty
+                  ? null
+                  : totalsByCategory.entries.reduce(
+                      (current, next) => current.value >= next.value ? current : next,
+                    );
 
               final recentMonths = monthsState.months.take(6).toList().reversed.toList();
               final barGroups = recentMonths.asMap().entries.map((entry) {
-                final monthTotal = expensesState.expenses
+                final total = expensesState.expenses
                     .where((expense) => expense.monthId == entry.value.id)
                     .fold<double>(0, (sum, expense) => sum + expense.amount);
-
                 return BarChartGroupData(
                   x: entry.key,
                   barRods: [
                     BarChartRodData(
-                      toY: monthTotal,
+                      toY: total,
                       width: 18,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ],
                 );
               }).toList();
 
               final pieSections = totalsByCategory.entries.map((entry) {
-                final matches = categories.where((item) => item.id == entry.key);
-                final category = matches.firstOrNull;
-                if (category == null) {
-                  return null;
-                }
                 return PieChartSectionData(
-                  color: Color(category.colorValue),
+                  color: Color(entry.key.colorValue),
                   value: entry.value,
-                  title: category.name,
-                  radius: 90,
+                  title: entry.key.name,
+                  radius: 86,
                 );
-              }).whereType<PieChartSectionData>().toList();
+              }).toList();
+
+              final totalSpent = monthExpenses.fold<double>(
+                0,
+                (sum, expense) => sum + expense.amount,
+              );
 
               return ListView(
                 padding: const EdgeInsets.all(20),
                 children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _StatsInfoCard(
+                          title: 'إجمالي المصروفات',
+                          value: Formatters.currency.format(totalSpent),
+                          icon: Icons.payments_rounded,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _StatsInfoCard(
+                          title: 'أعلى تصنيف',
+                          value: topCategoryEntry?.key.name ?? 'لا يوجد',
+                          icon: Icons.emoji_events_rounded,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
                   Card(
                     child: Padding(
-                      padding: const EdgeInsets.all(20),
+                      padding: const EdgeInsets.all(18),
                       child: SizedBox(
-                        height: 240,
+                        height: 260,
+                        child: PieChart(PieChartData(sections: pieSections)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: SizedBox(
+                        height: 220,
                         child: BarChart(
                           BarChartData(
                             gridData: const FlGridData(show: false),
@@ -114,8 +150,7 @@ class StatisticsPage extends StatelessWidget {
                                     return Padding(
                                       padding: const EdgeInsets.only(top: 8),
                                       child: Text(
-                                        recentMonths[value.toInt()].monthNumber
-                                            .toString(),
+                                        recentMonths[value.toInt()].monthNumber.toString(),
                                       ),
                                     );
                                   },
@@ -129,29 +164,19 @@ class StatisticsPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: SizedBox(
-                        height: 280,
-                        child: PieChart(PieChartData(sections: pieSections)),
+                  ...totalsByCategory.entries.map(
+                    (entry) => ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Color(entry.key.colorValue).withOpacity(0.15),
+                        child: Icon(
+                          Icons.pie_chart_outline_rounded,
+                          color: Color(entry.key.colorValue),
+                        ),
                       ),
+                      title: Text(entry.key.name),
+                      trailing: Text(Formatters.currency.format(entry.value)),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  ...totalsByCategory.entries.map((entry) {
-                    final matches =
-                        categories.where((item) => item.id == entry.key);
-                    final category = matches.firstOrNull;
-                    if (category == null) {
-                      return const SizedBox.shrink();
-                    }
-                    return ListTile(
-                      leading: CircleAvatar(backgroundColor: Color(category.colorValue)),
-                      title: Text(category.name),
-                      trailing: Text(Formatters.currency.format(entry.value)),
-                    );
-                  }),
                 ],
               );
             },
@@ -162,6 +187,38 @@ class StatisticsPage extends StatelessWidget {
   }
 }
 
-extension<T> on Iterable<T> {
-  T? get firstOrNull => isEmpty ? null : first;
+class _StatsInfoCard extends StatelessWidget {
+  const _StatsInfoCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+  });
+
+  final String title;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon),
+            const SizedBox(height: 10),
+            Text(title, style: Theme.of(context).textTheme.bodyMedium),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

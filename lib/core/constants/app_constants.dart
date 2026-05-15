@@ -10,6 +10,7 @@ class AppConstants {
   static const String darkModeKey = 'dark_mode';
   static const String onboardingKey = 'onboarding_done';
   static const String selectedMonthKey = 'selected_month_id';
+  static const String categoriesSeedVersionKey = 'categories_seed_version';
 
   static const double defaultBudget = 5000;
 

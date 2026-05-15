@@ -8,6 +8,8 @@ class IconMapper {
     'sports_soccer': Icons.sports_soccer_rounded,
     'payments': Icons.payments_rounded,
     'celebration': Icons.celebration_rounded,
+    'wifi': Icons.wifi_rounded,
+    'more_horiz': Icons.more_horiz_rounded,
     'shopping_bag': Icons.shopping_bag_rounded,
     'medical': Icons.medical_services_rounded,
     'school': Icons.school_rounded,

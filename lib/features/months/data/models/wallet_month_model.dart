@@ -9,7 +9,7 @@ class WalletMonthModel extends WalletMonth {
     required super.name,
     required super.year,
     required super.monthNumber,
-    required super.budget,
+    required super.monthlyIncome,
     required super.createdAt,
   });
 
@@ -19,7 +19,7 @@ class WalletMonthModel extends WalletMonth {
       name: entity.name,
       year: entity.year,
       monthNumber: entity.monthNumber,
-      budget: entity.budget,
+      monthlyIncome: entity.monthlyIncome,
       createdAt: entity.createdAt,
     );
   }
@@ -36,7 +36,7 @@ class WalletMonthModelAdapter extends TypeAdapter<WalletMonthModel> {
       name: reader.readString(),
       year: reader.readInt(),
       monthNumber: reader.readInt(),
-      budget: reader.readDouble(),
+      monthlyIncome: reader.readDouble(),
       createdAt: DateTime.parse(reader.readString()),
     );
   }
@@ -48,7 +48,7 @@ class WalletMonthModelAdapter extends TypeAdapter<WalletMonthModel> {
       ..writeString(obj.name)
       ..writeInt(obj.year)
       ..writeInt(obj.monthNumber)
-      ..writeDouble(obj.budget)
+      ..writeDouble(obj.monthlyIncome)
       ..writeString(obj.createdAt.toIso8601String());
   }
 }

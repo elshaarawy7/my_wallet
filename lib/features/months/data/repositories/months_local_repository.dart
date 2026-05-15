@@ -43,7 +43,7 @@ class MonthsLocalRepository implements MonthsRepository {
       name: DateFormat('MMMM yyyy', 'ar').format(now),
       year: now.year,
       monthNumber: now.month,
-      budget: AppConstants.defaultBudget,
+      monthlyIncome: AppConstants.defaultBudget,
       createdAt: DateTime(now.year, now.month, 1),
     );
 
@@ -54,5 +54,28 @@ class MonthsLocalRepository implements MonthsRepository {
   @override
   Future<void> setSelectedMonthId(String monthId) async {
     await _prefsService.setString(AppConstants.selectedMonthKey, monthId);
+  }
+
+  @override
+  Future<void> updateMonthlyIncome({
+    required String monthId,
+    required double monthlyIncome,
+  }) async {
+    final month = _hiveService.monthsBox.get(monthId);
+    if (month == null) {
+      return;
+    }
+
+    await _hiveService.monthsBox.put(
+      month.id,
+      WalletMonthModel(
+        id: month.id,
+        name: month.name,
+        year: month.year,
+        monthNumber: month.monthNumber,
+        monthlyIncome: monthlyIncome,
+        createdAt: month.createdAt,
+      ),
+    );
   }
 }

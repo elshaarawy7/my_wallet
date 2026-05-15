@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/presentation/pages/auth_page.dart';
 import '../../features/categories/presentation/pages/categories_page.dart';
 import '../../features/expenses/domain/entities/expense.dart';
 import '../../features/expenses/presentation/pages/add_expense_page.dart';
@@ -10,7 +11,6 @@ import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/splash/presentation/pages/splash_page.dart';
 import '../../features/statistics/presentation/pages/statistics_page.dart';
-import '../../features/auth/presentation/pages/auth_page.dart';
 
 class AppRouter {
   late final GoRouter router = GoRouter(
@@ -30,9 +30,21 @@ class AppRouter {
       ),
       GoRoute(
         path: '/expense',
-        builder: (context, state) => AddExpensePage(
-          expense: state.extra is Expense ? state.extra as Expense : null,
-        ),
+        builder: (context, state) {
+          final extra = state.extra;
+          if (extra is Expense) {
+            return AddExpensePage(expense: extra);
+          }
+
+          if (extra is Map<String, dynamic>) {
+            return AddExpensePage(
+              expense: extra['expense'] as Expense?,
+              initialCategoryId: extra['categoryId'] as String?,
+            );
+          }
+
+          return const AddExpensePage();
+        },
       ),
       GoRoute(
         path: '/categories',
@@ -100,9 +112,7 @@ class AppShellPage extends StatelessWidget {
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
-        onDestinationSelected: (index) {
-          navigationShell.goBranch(index);
-        },
+        onDestinationSelected: navigationShell.goBranch,
         destinations: List.generate(
           labels.length,
           (index) => NavigationDestination(

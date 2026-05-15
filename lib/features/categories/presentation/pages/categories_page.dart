@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/utils/icon_mapper.dart';
-import '../../../categories/domain/entities/expense_category.dart';
+import '../../domain/entities/expense_category.dart';
 import '../cubit/categories_cubit.dart';
 
 class CategoriesPage extends StatelessWidget {
@@ -12,11 +12,11 @@ class CategoriesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('تخصيص التصنيفات')),
+      appBar: AppBar(title: const Text('إدارة التصنيفات')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showCategoryDialog(context),
         icon: const Icon(Icons.add_rounded),
-        label: const Text('تصنيف جديد'),
+        label: const Text('إضافة تصنيف'),
       ),
       body: BlocBuilder<CategoriesCubit, CategoriesState>(
         builder: (context, state) {
@@ -36,6 +36,7 @@ class CategoriesPage extends StatelessWidget {
                     ),
                   ),
                   title: Text(category.name),
+                  subtitle: Text(category.isDefault ? 'تصنيف افتراضي' : 'تصنيف مخصص'),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -43,13 +44,12 @@ class CategoriesPage extends StatelessWidget {
                         onPressed: () => _showCategoryDialog(context, category: category),
                         icon: const Icon(Icons.edit_outlined),
                       ),
-                      if (!category.isDefault)
-                        IconButton(
-                          onPressed: () => context
-                              .read<CategoriesCubit>()
-                              .deleteCategory(category.id),
-                          icon: const Icon(Icons.delete_outline_rounded),
-                        ),
+                      IconButton(
+                        onPressed: () => context
+                            .read<CategoriesCubit>()
+                            .deleteCategory(category.id),
+                        icon: const Icon(Icons.delete_outline_rounded),
+                      ),
                     ],
                   ),
                 ),
@@ -95,6 +95,7 @@ class CategoriesPage extends StatelessWidget {
                     const SizedBox(height: 16),
                     Wrap(
                       spacing: 8,
+                      runSpacing: 8,
                       children: IconMapper.icons.keys.map((key) {
                         final selected = iconKey == key;
                         return ChoiceChip(
@@ -125,9 +126,14 @@ class CategoriesPage extends StatelessWidget {
                 ),
                 FilledButton(
                   onPressed: () async {
+                    final trimmedName = nameController.text.trim();
+                    if (trimmedName.isEmpty) {
+                      return;
+                    }
+
                     final item = ExpenseCategory(
                       id: category?.id ?? const Uuid().v4(),
-                      name: nameController.text.trim(),
+                      name: trimmedName,
                       iconKey: iconKey,
                       colorValue: colorValue,
                       isDefault: category?.isDefault ?? false,

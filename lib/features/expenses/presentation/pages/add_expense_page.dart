@@ -12,9 +12,14 @@ import '../../domain/entities/expense.dart';
 import '../cubit/expenses_cubit.dart';
 
 class AddExpensePage extends StatefulWidget {
-  const AddExpensePage({super.key, this.expense});
+  const AddExpensePage({
+    super.key,
+    this.expense,
+    this.initialCategoryId,
+  });
 
   final Expense? expense;
+  final String? initialCategoryId;
 
   @override
   State<AddExpensePage> createState() => _AddExpensePageState();
@@ -24,6 +29,8 @@ class _AddExpensePageState extends State<AddExpensePage> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   final _noteController = TextEditingController();
+  final _dateController = TextEditingController();
+
   DateTime _selectedDate = DateTime.now();
   String? _selectedCategoryId;
 
@@ -38,13 +45,17 @@ class _AddExpensePageState extends State<AddExpensePage> {
       _noteController.text = expense.note;
       _selectedDate = expense.date;
       _selectedCategoryId = expense.categoryId;
+    } else {
+      _selectedCategoryId = widget.initialCategoryId;
     }
+    _syncDateField();
   }
 
   @override
   void dispose() {
     _amountController.dispose();
     _noteController.dispose();
+    _dateController.dispose();
     super.dispose();
   }
 
@@ -60,9 +71,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
           if (_isEditing)
             IconButton(
               onPressed: () async {
-                await context
-                    .read<ExpensesCubit>()
-                    .deleteExpense(widget.expense!.id);
+                await context.read<ExpensesCubit>().deleteExpense(widget.expense!.id);
                 if (context.mounted) {
                   context.pop();
                 }
@@ -77,17 +86,26 @@ class _AddExpensePageState extends State<AddExpensePage> {
           child: Form(
             key: _formKey,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (month != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Text(
+                      'الشهر الحالي: ${month.name}',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
                 AppTextField(
                   controller: _amountController,
                   label: 'المبلغ',
-                  keyboardType: TextInputType.number,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'أدخل المبلغ';
                     }
-                    if (double.tryParse(value) == null) {
-                      return 'أدخل رقمًا صحيحًا';
+                    if ((double.tryParse(value) ?? 0) <= 0) {
+                      return 'أدخل مبلغًا صحيحًا';
                     }
                     return null;
                   },
@@ -98,7 +116,7 @@ class _AddExpensePageState extends State<AddExpensePage> {
                   decoration: const InputDecoration(labelText: 'التصنيف'),
                   items: categories
                       .map(
-                        (category) => DropdownMenuItem(
+                        (category) => DropdownMenuItem<String>(
                           value: category.id,
                           child: Text(category.name),
                         ),
@@ -110,14 +128,12 @@ class _AddExpensePageState extends State<AddExpensePage> {
                 const SizedBox(height: 14),
                 AppTextField(
                   controller: _noteController,
-                  label: 'ملاحظة',
+                  label: 'ملاحظة اختيارية',
                   maxLines: 3,
                 ),
                 const SizedBox(height: 14),
                 AppTextField(
-                  controller: TextEditingController(
-                    text: Formatters.shortDate.format(_selectedDate),
-                  ),
+                  controller: _dateController,
                   label: 'التاريخ',
                   readOnly: true,
                   suffixIcon: const Icon(Icons.calendar_today_rounded),
@@ -125,27 +141,9 @@ class _AddExpensePageState extends State<AddExpensePage> {
                 ),
                 const SizedBox(height: 24),
                 PrimaryButton(
-                  label: _isEditing ? 'حفظ التعديلات' : 'إضافة المصروف',
+                  label: _isEditing ? 'حفظ التعديلات' : 'حفظ المصروف',
                   icon: Icons.check_circle_rounded,
-                  onPressed: month == null
-                      ? null
-                      : () async {
-                          if (_formKey.currentState!.validate()) {
-                            final expense = Expense(
-                              id: widget.expense?.id ?? const Uuid().v4(),
-                              monthId: month.id,
-                              categoryId: _selectedCategoryId!,
-                              amount: double.parse(_amountController.text),
-                              note: _noteController.text.trim(),
-                              date: _selectedDate,
-                              createdAt: widget.expense?.createdAt ?? DateTime.now(),
-                            );
-                            await context.read<ExpensesCubit>().saveExpense(expense);
-                            if (context.mounted) {
-                              context.pop();
-                            }
-                          }
-                        },
+                  onPressed: month == null ? null : _saveExpense,
                 ),
               ],
             ),
@@ -162,8 +160,39 @@ class _AddExpensePageState extends State<AddExpensePage> {
       firstDate: DateTime(2020),
       lastDate: DateTime(2035),
     );
-    if (date != null) {
-      setState(() => _selectedDate = date);
+    if (date == null) {
+      return;
     }
+
+    setState(() {
+      _selectedDate = date;
+      _syncDateField();
+    });
+  }
+
+  Future<void> _saveExpense() async {
+    final month = context.read<MonthsCubit>().state.selectedMonth;
+    if (month == null || !_formKey.currentState!.validate()) {
+      return;
+    }
+
+    final expense = Expense(
+      id: widget.expense?.id ?? const Uuid().v4(),
+      monthId: month.id,
+      categoryId: _selectedCategoryId!,
+      amount: double.parse(_amountController.text),
+      note: _noteController.text.trim(),
+      date: _selectedDate,
+      createdAt: widget.expense?.createdAt ?? DateTime.now(),
+    );
+
+    await context.read<ExpensesCubit>().saveExpense(expense);
+    if (mounted) {
+      context.pop();
+    }
+  }
+
+  void _syncDateField() {
+    _dateController.text = Formatters.shortDate.format(_selectedDate);
   }
 }

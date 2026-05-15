@@ -5,6 +5,11 @@ abstract class MonthsRepository {
 
   Future<void> saveMonth(WalletMonth month);
 
+  Future<void> updateMonthlyIncome({
+    required String monthId,
+    required double monthlyIncome,
+  });
+
   Future<String?> getSelectedMonthId();
 
   Future<void> setSelectedMonthId(String monthId);
