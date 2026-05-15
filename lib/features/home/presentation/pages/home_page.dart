@@ -24,7 +24,7 @@ class HomePage extends StatelessWidget {
         actions: [
           IconButton(
             onPressed: () => context.push('/categories'),
-            icon: const Icon(Icons.tune_rounded),
+            icon: const Icon(Icons.add_card_rounded),
           ),
         ],
       ),
@@ -61,72 +61,68 @@ class HomePage extends StatelessWidget {
                       await context.read<CategoriesCubit>().loadCategories();
                       await context.read<ExpensesCubit>().loadExpenses();
                     },
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-                      children: [
-                        _IncomeSummaryCard(
-                          month: month,
-                          totalSpent: totalSpent,
-                          remaining: remaining,
-                          progress: progress,
-                          onEditIncome: () => _showIncomeSheet(context, month),
-                        ),
-                        const SizedBox(height: 16),
-                        _SectionHeader(
-                          title: 'تصنيفات المصروفات',
-                          actionLabel: 'الأشهر',
-                          onPressed: () => context.go('/months'),
-                        ),
-                        const SizedBox(height: 12),
-                        GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: categories.length,
-                          gridDelegate:
-                              const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 1.45,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
+                    child: CustomScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      slivers: [
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
+                          sliver: SliverList(
+                            delegate: SliverChildListDelegate(
+                              [
+                                _IncomeSummaryCard(
+                                  month: month,
+                                  totalSpent: totalSpent,
+                                  remaining: remaining,
+                                  progress: progress,
+                                  onEditIncome: () => _showIncomeSheet(context, month),
+                                ),
+                                const SizedBox(height: 18),
+                                _SectionHeader(
+                                  title: 'التصنيفات',
+                                  actionLabel: 'إدارة',
+                                  onPressed: () => context.push('/categories'),
+                                ),
+                                const SizedBox(height: 10),
+                                _CategoriesPanel(
+                                  categories: categories,
+                                  expenses: monthExpenses,
+                                ),
+                                const SizedBox(height: 18),
+                                _SectionHeader(
+                                  title: 'آخر العمليات',
+                                  actionLabel: 'إضافة',
+                                  onPressed: () => context.push('/expense'),
+                                ),
+                                const SizedBox(height: 10),
+                              ],
+                            ),
                           ),
-                          itemBuilder: (context, index) {
-                            final category = categories[index];
-                            final categoryTotal = monthExpenses
-                                .where((expense) => expense.categoryId == category.id)
-                                .fold<double>(0, (sum, expense) => sum + expense.amount);
-
-                            return _CategoryCard(
-                              category: category,
-                              amount: categoryTotal,
-                              onTap: () => context.push(
-                                '/expense',
-                                extra: <String, dynamic>{'categoryId': category.id},
-                              ),
-                            );
-                          },
                         ),
-                        const SizedBox(height: 18),
-                        _SectionHeader(
-                          title: 'آخر العمليات',
-                          actionLabel: 'إضافة مصروف',
-                          onPressed: () => context.push('/expense'),
-                        ),
-                        const SizedBox(height: 12),
                         if (monthExpenses.isEmpty)
-                          const EmptyStateView(
-                            title: 'لا توجد مصروفات بعد',
-                            message: 'اضغط على أي تصنيف بالأعلى لإضافة أول مصروف يومي.',
-                            icon: Icons.receipt_long_rounded,
+                          const SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: EmptyStateView(
+                              title: 'لا توجد عمليات بعد',
+                              message: 'اضغط على أي تصنيف لإضافة أول مصروف يومي.',
+                              icon: Icons.receipt_long_rounded,
+                            ),
                           )
                         else
-                          ...monthExpenses.take(8).map(
-                                (expense) => _ExpenseTile(
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 110),
+                            sliver: SliverList.builder(
+                              itemCount: monthExpenses.take(8).length,
+                              itemBuilder: (context, index) {
+                                final expense = monthExpenses[index];
+                                return _ExpenseTile(
                                   expense: expense,
                                   category: categories
                                       .where((item) => item.id == expense.categoryId)
                                       .firstOrNull,
-                                ),
-                              ),
+                                );
+                              },
+                            ),
+                          ),
                       ],
                     ),
                   );
@@ -162,7 +158,7 @@ class HomePage extends StatelessWidget {
               Text(
                 'تعديل الدخل الشهري',
                 style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w800,
                     ),
               ),
               const SizedBox(height: 14),
@@ -220,85 +216,100 @@ class _IncomeSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.95, end: 1),
-      duration: const Duration(milliseconds: 320),
-      curve: Curves.easeOut,
-      builder: (context, value, child) {
-        return Transform.scale(scale: value, child: child);
-      },
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          month.name,
-                          style:
-                              Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    color: Colors.grey[600],
-                                  ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'الدخل الشهري',
-                          style:
-                              Theme.of(context).textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton.filledTonal(
-                    onPressed: onEditIncome,
-                    icon: const Icon(Icons.edit_rounded),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Text(
-                Formatters.currency.format(month.monthlyIncome),
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      color: AppConstants.primaryGreen,
-                    ),
-              ),
-              const SizedBox(height: 14),
-              LinearProgressIndicator(
-                value: progress,
-                minHeight: 10,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: _MoneyInfoTile(
-                      label: 'المصروفات',
-                      value: Formatters.currency.format(totalSpent),
-                      icon: Icons.trending_up_rounded,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _MoneyInfoTile(
-                      label: 'المتبقي',
-                      value: Formatters.currency.format(remaining),
-                      icon: Icons.account_balance_wallet_rounded,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        gradient: LinearGradient(
+          colors: [
+            AppConstants.primaryGreen,
+            AppConstants.primaryGreen.withOpacity(0.88),
+          ],
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppConstants.primaryGreen.withOpacity(0.16),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
           ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        month.name,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.white70,
+                            ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'الدخل الشهري',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.white.withOpacity(0.14),
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: onEditIncome,
+                  icon: const Icon(Icons.edit_rounded, size: 20),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              Formatters.currency.format(month.monthlyIncome),
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                  ),
+            ),
+            const SizedBox(height: 14),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(99),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 9,
+                backgroundColor: Colors.white.withOpacity(0.18),
+                valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: _MoneyInfoTile(
+                    label: 'المصروفات',
+                    value: Formatters.currency.format(totalSpent),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _MoneyInfoTile(
+                    label: 'المتبقي',
+                    value: Formatters.currency.format(remaining),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -309,32 +320,34 @@ class _MoneyInfoTile extends StatelessWidget {
   const _MoneyInfoTile({
     required this.label,
     required this.value,
-    required this.icon,
   });
 
   final String label;
   final String value;
-  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.4),
+        color: Colors.white.withOpacity(0.12),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18),
-          const SizedBox(height: 8),
-          Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.white70,
+                ),
+          ),
           const SizedBox(height: 4),
           Text(
             value,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
                 ),
           ),
         ],
@@ -369,6 +382,7 @@ class _SectionHeader extends StatelessWidget {
         if (actionLabel != null)
           TextButton(
             onPressed: onPressed,
+            style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
             child: Text(actionLabel!),
           ),
       ],
@@ -376,53 +390,262 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _CategoryCard extends StatelessWidget {
-  const _CategoryCard({
+class _CategoriesPanel extends StatelessWidget {
+  const _CategoriesPanel({
+    required this.categories,
+    required this.expenses,
+  });
+
+  final List<ExpenseCategory> categories;
+  final List<Expense> expenses;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'التصنيف',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ),
+                Text(
+                  'المبلغ',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(width: 34),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          ...List.generate(categories.length, (index) {
+            final category = categories[index];
+            final spent = expenses
+                .where((expense) => expense.categoryId == category.id)
+                .fold<double>(0, (sum, expense) => sum + expense.amount);
+
+            return Column(
+              children: [
+                _CategoryRow(
+                  category: category,
+                  amount: spent,
+                ),
+                if (index != categories.length - 1)
+                  Divider(
+                    height: 1,
+                    indent: 16,
+                    endIndent: 16,
+                    color: Colors.grey.withOpacity(0.15),
+                  ),
+              ],
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryRow extends StatelessWidget {
+  const _CategoryRow({
     required this.category,
     required this.amount,
-    required this.onTap,
   });
 
   final ExpenseCategory category;
   final double amount;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final color = Color(category.colorValue);
+
     return InkWell(
-      borderRadius: BorderRadius.circular(24),
-      onTap: onTap,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: color.withOpacity(0.14),
-                child: Icon(IconMapper.fromKey(category.iconKey), color: color),
+      onTap: () => context.push(
+        '/expense',
+        extra: <String, dynamic>{'categoryId': category.id},
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 15,
+              backgroundColor: color.withOpacity(0.14),
+              child: Icon(
+                IconMapper.fromKey(category.iconKey),
+                color: color,
+                size: 16,
               ),
-              const Spacer(),
-              Text(
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
                 category.name,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                Formatters.currency.format(amount),
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
-          ),
+            ),
+            Text(
+              Formatters.currency.format(amount),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+            PopupMenuButton<_CategoryAction>(
+              icon: const Icon(Icons.more_horiz_rounded, size: 18),
+              onSelected: (action) {
+                switch (action) {
+                  case _CategoryAction.addExpense:
+                    context.push(
+                      '/expense',
+                      extra: <String, dynamic>{'categoryId': category.id},
+                    );
+                    break;
+                  case _CategoryAction.edit:
+                    _showCategoryDialog(context, category: category);
+                    break;
+                  case _CategoryAction.delete:
+                    context.read<CategoriesCubit>().deleteCategory(category.id);
+                    break;
+                }
+              },
+              itemBuilder: (context) => const [
+                PopupMenuItem(
+                  value: _CategoryAction.addExpense,
+                  child: Text('إضافة مصروف'),
+                ),
+                PopupMenuItem(
+                  value: _CategoryAction.edit,
+                  child: Text('تعديل التصنيف'),
+                ),
+                PopupMenuItem(
+                  value: _CategoryAction.delete,
+                  child: Text('حذف التصنيف'),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
+
+  Future<void> _showCategoryDialog(
+    BuildContext context, {
+    required ExpenseCategory category,
+  }) async {
+    final nameController = TextEditingController(text: category.name);
+    var iconKey = category.iconKey;
+    var colorValue = category.colorValue;
+    const palette = [
+      0xFF26A69A,
+      0xFFE57373,
+      0xFF64B5F6,
+      0xFFFFB74D,
+      0xFF9575CD,
+      0xFFF06292,
+    ];
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('تعديل التصنيف'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(labelText: 'اسم التصنيف'),
+                    ),
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: IconMapper.icons.keys.map((key) {
+                        return ChoiceChip(
+                          label: Icon(IconMapper.fromKey(key)),
+                          selected: iconKey == key,
+                          onSelected: (_) => setState(() => iconKey = key),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 8,
+                      children: palette.map((color) {
+                        return ChoiceChip(
+                          label: CircleAvatar(radius: 10, backgroundColor: Color(color)),
+                          selected: colorValue == color,
+                          onSelected: (_) => setState(() => colorValue = color),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('إلغاء'),
+                ),
+                FilledButton(
+                  onPressed: () async {
+                    final trimmedName = nameController.text.trim();
+                    if (trimmedName.isEmpty) {
+                      return;
+                    }
+                    await context.read<CategoriesCubit>().saveCategory(
+                          ExpenseCategory(
+                            id: category.id,
+                            name: trimmedName,
+                            iconKey: iconKey,
+                            colorValue: colorValue,
+                            isDefault: category.isDefault,
+                          ),
+                        );
+                    if (dialogContext.mounted) {
+                      Navigator.pop(dialogContext);
+                    }
+                  },
+                  child: const Text('حفظ'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
 }
+
+enum _CategoryAction { addExpense, edit, delete }
 
 class _ExpenseTile extends StatelessWidget {
   const _ExpenseTile({required this.expense, required this.category});
@@ -433,26 +656,42 @@ class _ExpenseTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = Color(category?.colorValue ?? 0xFFBDBDBD);
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: ListTile(
+        dense: true,
+        visualDensity: const VisualDensity(vertical: -2),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         onTap: () => context.push('/expense', extra: expense),
         leading: CircleAvatar(
+          radius: 16,
           backgroundColor: color.withOpacity(0.15),
           child: Icon(
             IconMapper.fromKey(category?.iconKey ?? 'shopping_bag'),
             color: color,
+            size: 16,
           ),
         ),
-        title: Text(expense.note.isEmpty ? category?.name ?? 'مصروف' : expense.note),
-        subtitle: Text(
-          '${category?.name ?? 'أخرى'} • ${Formatters.shortDate.format(expense.date)}',
+        title: Text(
+          expense.note.isEmpty ? category?.name ?? 'مصروف' : expense.note,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
         ),
         trailing: Text(
           Formatters.currency.format(expense.amount),
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w800,
               ),
+        ),
+        subtitle: Text(
+          '${category?.name ?? 'أخرى'} • ${Formatters.shortDate.format(expense.date)}',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ),
     );
