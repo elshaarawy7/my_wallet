@@ -11,10 +11,11 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('الملف الشخصي')),
+      appBar: AppBar(title: const Text('الحساب')),
       body: BlocBuilder<AuthCubit, AuthState>(
         builder: (context, authState) {
           final user = authState.user;
+
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
@@ -67,6 +68,12 @@ class ProfilePage extends StatelessWidget {
                           secondary: const Icon(Icons.dark_mode_rounded),
                         );
                       },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.favorite_rounded),
+                      title: const Text('دعم المطور'),
+                      subtitle: const Text('LinkedIn ورقم الهاتف'),
+                      onTap: () => context.push('/support-developer'),
                     ),
                     ListTile(
                       leading: const Icon(Icons.logout_rounded),

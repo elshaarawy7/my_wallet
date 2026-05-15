@@ -11,6 +11,7 @@ import '../../features/onboarding/presentation/pages/onboarding_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/splash/presentation/pages/splash_page.dart';
 import '../../features/statistics/presentation/pages/statistics_page.dart';
+import '../../features/support/presentation/pages/support_developer_page.dart';
 
 class AppRouter {
   late final GoRouter router = GoRouter(
@@ -49,6 +50,10 @@ class AppRouter {
       GoRoute(
         path: '/categories',
         builder: (context, state) => const CategoriesPage(),
+      ),
+      GoRoute(
+        path: '/support-developer',
+        builder: (context, state) => const SupportDeveloperPage(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
